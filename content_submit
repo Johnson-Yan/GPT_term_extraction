@@ -1,0 +1,94 @@
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.wait import WebDriverWait
+import time
+import content_acq
+import xzzz
+
+def submit_gpt(prompt,content_list):
+
+    # 创建Chrome驱动程序
+
+    options = webdriver.ChromeOptions()
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_experimental_option('useAutomationExtension', False)
+    options.add_experimental_option('excludeSwitches', ['enable-automation'])
+    options = webdriver.ChromeOptions()
+    options.add_argument('--disable-gpu')
+    options.add_argument('--no-sandbox')
+    options.add_argument('lang=zh-CN.UTF-8')
+
+    #options.add_argument(f'user-agent={settings.USER_AGENT}')
+    prefs = {
+        'profile.managed_default_content_settings.images': 2,
+        'profile.managed_default_content_settings.notifications': 2,
+        'intl.accept_languages': 'zh-CN,zh;q=0.9,en;q=0.5',
+        }
+    options.add_experimental_option('prefs', prefs)
+    driver = webdriver.Chrome(chrome_options=options)
+
+        # 打开网页
+        #driver.refresh()
+    driver.get('https://chat.ninvfeng.xyz/')
+    time.sleep(90)
+
+    # 输入要搜索的内容
+
+    for sublist in content_list:  # 外层循环遍历每个小列表
+        for subsublist in sublist:  # 内层循环遍历当前小列表中的所有元素
+
+                add=fr'{prompt+str(subsublist)}'
+                textarea_element = driver.find_element(By.CLASS_NAME, value='gen-textarea')
+                textarea_element.send_keys(add)
+
+        #for i in range(0,len(content)):
+        #add=fr'{prompt+str(content[i])}'
+        #textarea_element = driver.find_element(By.CLASS_NAME, value='gen-textarea')
+        #textarea_element.send_keys(add)
+                time.sleep(2)
+
+        #textarea_element.click() # element is not attached to the page document
+        #提交问题
+                textarea_element.send_keys(Keys.ENTER)
+
+                time.sleep(50)
+                #需要将结果输入到表格中，明天写，用到了openpyxl
+                # 定位所有表格元素
+                try:
+                    tables = driver.find_element(By.TAG_NAME, "table")
+                    lis = []
+                    # 遍历每个表格
+                    td_content = driver.find_elements(By.TAG_NAME, 'td')
+                    for td in td_content:
+                        lis.append(td.text)
+                    print(lis)
+                    list_alis = []
+                    list_blis = []
+                    '''
+                    for i in range(0, len(lis)):
+                        if (i % 2 == 0):
+                            list_blis.append(lis[i])
+                        if (i % 2 == 1):
+                            list_alis.append(lis[i])
+                    '''
+                    #写入数据
+                    file_path = 'xlsx/optb.xlsx'
+                    xzzz.write_xls(file_path,lis)
+                    driver.refresh()
+                except:
+                    print('gpt给出数据异常~')
+                    driver.refresh()
+
+#保存网页
+    with open("html/gpt.html", "wb") as file:
+        file.write(driver.page_source.encode("UTF-8","ignore"))
+        file.close()
+        # 关闭浏览器
+        driver.quit()
+
+cnt_list=content_acq.list_submit('word_20cent/10%')
+prompt=r"我需要你从下面的这个列表中提取术语并翻译成英文，对提取结果进行去重，并以表格形式分'中文术语'和'英文术语'两列输出，每条中文不超过10个字，术语表格不多于20行："
+submit_gpt(prompt,cnt_list)
+
